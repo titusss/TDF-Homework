@@ -1,3 +1,9 @@
+# The Pong game is from
+# "Pong Tutorial using Pygame – Adding a Scoring System"
+# May 27th, 2019
+# By Anonyous, 101Computing.net
+# https://www.101computing.net/pong-tutorial-using-pygame-adding-a-bouncing-ball/
+
 import pygame
 from random import randint
 
