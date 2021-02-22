@@ -1,4 +1,4 @@
-# The Pong game is from
+# The core Pong logic is from
 # "Pong Tutorial using Pygame – Adding a Scoring System"
 # May 27th, 2019
 # By Anonyous, 101Computing.net
@@ -10,6 +10,7 @@ from ball import Ball
 import time
 from adafruit_crickit import crickit
 from adafruit_seesaw.neopixel import NeoPixel
+from random import randint
 
 # Initialize crickit pot controls
 ss = crickit.seesaw
@@ -47,8 +48,9 @@ def translate(value, leftMin, leftMax, rightMin, rightMax): #Attributed to Adam 
     # Convert the 0-1 range into a value in the right range.
     return rightMin + (valueScaled * rightSpan)
 
-def vibrate(strength):
+def vibrate(strength, sleep_duration):
     crickit.drive_1.fraction = strength  # half on/off
+    time.sleep(sleep_duration)
     crickit.drive_1.fraction = 0.0
 
 pygame.init()
@@ -56,31 +58,39 @@ pygame.init()
 # Define some colors
 BLACK = (0,0,0)
 WHITE = (255,255,255)
+RED = (255,0,0)
  
 # Open a new window
-size = (700, 500)
-screen = pygame.display.set_mode(size)
+screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
+# size = (700, 500)
+# screen = pygame.display.set_mode(size)
 pygame.display.set_caption("Pong")
 
+paddleA = Paddle(WHITE, 10, 100)
+paddleB = Paddle(WHITE, 10, 100)
+
+ball = Ball(WHITE,10,10)
+
 def setPositions():
-    paddleA = Paddle(WHITE, 10, 100)
+    
     paddleA.rect.x = 20
     paddleA.rect.y = 200
     
-    paddleB = Paddle(WHITE, 10, 100)
-    paddleB.rect.x = 670
+    
+    paddleB.rect.x = 770
     paddleB.rect.y = 200
     
-    ball = Ball(WHITE,10,10)
+    
     ball.rect.x = 345
     ball.rect.y = 195
 
     #Initialise player scores
     scoreA = 0
     scoreB = 0
+    return paddleA, paddleB, ball, scoreA, scoreB
 
-setPositions()
- 
+paddleA, paddleB, ball, scoreA, scoreB = setPositions()
+
 #This will be a list that will contain all the sprites we intend to use in our game.
 all_sprites_list = pygame.sprite.Group()
  
@@ -89,31 +99,88 @@ all_sprites_list.add(paddleA)
 all_sprites_list.add(paddleB)
 all_sprites_list.add(ball)
  
+# Set Neopixel to empty
+pixels.fill((0,0,0))
+pixels.show()
+
 # The loop will carry on until the user exit the game (e.g. clicks the close button).
 carryOn = True
  
 # The clock will be used to control how fast the screen updates
 clock = pygame.time.Clock()
  
+ 
+def mainMenu(buttonOneCurr, buttonOnePrev):
+    inMenu = True
+    while inMenu:
+        keys = pygame.key.get_pressed()
+        for event in pygame.event.get(): # User did something
+            if event.type == pygame.QUIT: # If user clicked close
+              inMenu = False # Flag that we are done so we exit this loop
+            elif event.type==pygame.KEYDOWN:
+                if event.key==pygame.K_x: #Pressing the x Key will quit the game
+                     inMenu = False
+        
+        font = pygame.font.Font(None, 32)
+        fontArrow = pygame.font.Font(None, 64)
+        text = font.render("Hold the red button to start", 1, WHITE)
+        textArrow = fontArrow.render("^", 1, RED)
+        for i in range(2):
+            screen.fill(BLACK)
+            pixels.fill((randint(0,255),randint(0,255),randint(0,255)))
+            screen.blit(textArrow, (388,150))
+            screen.blit(text, (260,250+i*3))
+            time.sleep(0.3)
+     
+        # --- Go ahead and update the screen with what we've drawn.
+            pygame.display.flip()
+        buttonOnePrev = buttonOneCurr			# reset our "reading" of the button
+        buttonOneCurr = ss.digital_read(BUTTON_1)	# actually read the button and set that to a variable called "buttonOneCurr"
+        if not buttonOneCurr and buttonOnePrev:
+            pixels.fill((0,0,0))
+            pixels.show()
+            inMenu = False
+
+mainMenu(buttonOneCurr, buttonOnePrev)
+
 # -------- Main Program Loop -----------
 while carryOn:
+    
     # Read Potentiometer value
     potRightValue = ss.analog_read(potRight)
     potLeftValue = ss.analog_read(potLeft)
     # Potentiometer mapping
-    potLeftValueAdjusted = translate(potLeftValue, 10, 1023, 0, 1000)
-    potRightValueAdjusted = translate(potRightValue, 10, 1023, 0, 1000)
+    potLeftValueAdjusted = translate(potLeftValue, 10, 1023, 0, 380)
+    potRightValueAdjusted = translate(potRightValue, 10, 1023, 0, 380)
     # Read button values
     buttonOnePrev = buttonOneCurr			# reset our "reading" of the button
     buttonOneCurr = ss.digital_read(BUTTON_1)	# actually read the button and set that to a variable called "buttonOneCurr"
-
+    
     # --- Main event loop
     if not buttonOneCurr and buttonOnePrev:
-        vibrate(0.5)
-        setPositions()
-        lightUpNeopixel((0,255,0))
-        time.sleep(0.8)
-        vibrate(0.5)
+        winnerColor = (0,255,0)
+        winnerText = "   Left wins!!!"
+        if scoreA > scoreB:
+            winnerColor = (255,0,0)
+            winnerText = "   Right wins!!!"
+        elif scoreA == scoreB:
+            winnerColor = (255,255,0)
+            winnerText = "Both sides win!"
+        screen.fill(BLACK)
+        font = pygame.font.Font(None, 74)
+        winnerText = font.render(winnerText, 1, winnerColor)
+        screen.blit(winnerText, (200,210))
+        pygame.display.flip()
+        for i in range(24):
+            pixels[i] = winnerColor
+            time.sleep(0.08)
+        vibrate(0.3, 0.2)
+        vibrate(0.3, 0.2)
+        vibrate(0.3, 0.2)
+        pixels.fill((0,0,0))
+        pixels.show()
+        paddleA, paddleB, ball, scoreA, scoreB = setPositions()
+        mainMenu(buttonOneCurr, buttonOnePrev)
     for event in pygame.event.get(): # User did something
         if event.type == pygame.QUIT: # If user clicked close
               carryOn = False # Flag that we are done so we exit this loop
@@ -125,36 +192,37 @@ while carryOn:
     keys = pygame.key.get_pressed()
     paddleA.rect[1] = potLeftValueAdjusted
     paddleB.rect[1] = potRightValueAdjusted
- 
+
     # --- Game logic should go here
     all_sprites_list.update()
     
     #Check if the ball is bouncing against any of the 4 walls:
-    if ball.rect.x>=690:
+    print(ball.velocity[0], ball.velocity[1])
+    if ball.rect.x>=790:
         scoreA+=1
         lightUpNeopixel((255,0,0))
-        vibrate(0.5)
+        vibrate(0.2, 0.1)
         ball.velocity[0] = -ball.velocity[0]
     if ball.rect.x<=0:
         scoreB+=1
-        vibrate(0.5)
+        vibrate(0.2, 0.1)
         lightUpNeopixel((0,0,255))
         ball.velocity[0] = -ball.velocity[0]
-    if ball.rect.y>490:
+    if ball.rect.y>450:
         ball.velocity[1] = -ball.velocity[1]
     if ball.rect.y<0:
-        ball.velocity[1] = -ball.velocity[1]     
+        ball.velocity[1] = -ball.velocity[1] 
  
     #Detect collisions between the ball and the paddles
     if pygame.sprite.collide_mask(ball, paddleA) or pygame.sprite.collide_mask(ball, paddleB):
       ball.bounce()
-      vibrate(0.1)
+      vibrate(0.3, 0.05)
     
     # --- Drawing code should go here
     # First, clear the screen to black. 
     screen.fill(BLACK)
     #Draw the net
-    pygame.draw.line(screen, WHITE, [349, 0], [349, 500], 5)
+    pygame.draw.line(screen, WHITE, [399, 0], [399, 500], 5)
     
     #Now let's draw all the sprites in one go. (For now we only have 2 sprites!)
     all_sprites_list.draw(screen) 
@@ -162,9 +230,9 @@ while carryOn:
     #Display scores:
     font = pygame.font.Font(None, 74)
     text = font.render(str(scoreA), 1, WHITE)
-    screen.blit(text, (250,10))
+    screen.blit(text, (305,10))
     text = font.render(str(scoreB), 1, WHITE)
-    screen.blit(text, (420,10))
+    screen.blit(text, (465,10))
  
     # --- Go ahead and update the screen with what we've drawn.
     pygame.display.flip()
