@@ -1,4 +1,4 @@
-# The Pong game is from
+# The core Pong logic is from
 # "Pong Tutorial using Pygame – Adding a Scoring System"
 # May 27th, 2019
 # By Anonyous, 101Computing.net
@@ -25,7 +25,7 @@ class Ball(pygame.sprite.Sprite):
         # Draw the ball (a rectangle!)
         pygame.draw.rect(self.image, color, [0, 0, width, height])
         
-        self.velocity = [randint(4,8),randint(-8,8)]
+        self.velocity = [randint(8,32),randint(-8,32)]
         
         # Fetch the rectangle object that has the dimensions of the image.
         self.rect = self.image.get_rect()
@@ -36,4 +36,4 @@ class Ball(pygame.sprite.Sprite):
           
     def bounce(self):
         self.velocity[0] = -self.velocity[0]
-        self.velocity[1] = randint(-8,8)
+        self.velocity[1] = randint(-16,16)
